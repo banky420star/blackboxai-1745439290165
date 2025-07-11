@@ -104,7 +104,7 @@ def model_indicators():
 
 @app.route('/')
 def dashboard():
-    return app.send_static_file('index.html')
+    return send_from_directory('templates', 'index.html')
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
