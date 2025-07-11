@@ -5,7 +5,7 @@ from flask import Flask, jsonify, send_from_directory, request
 import os
 import numpy as np
 
-app = Flask(__name__, static_folder='bybit-dashboard', static_url_path='')
+app = Flask(__name__, static_folder='static', static_url_path='')
 
 CONFIG_FILE = "config.json"
 STATUS_FILE = "bot_status.json"
