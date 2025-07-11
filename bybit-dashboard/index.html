@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDQN Trading Bot Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .profit {
+            color: #28a745;
+        }
+
+        .loss {
+            color: #dc3545;
+        }
+
+        .neutral {
+            color: #6c757d;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background-color: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        .status-offline {
+            background-color: #dc3545;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .trade-history {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .trade-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 5px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .trade-buy {
+            border-left-color: #28a745;
+        }
+
+        .trade-sell {
+            border-left-color: #dc3545;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .last-updated {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 DDQN Trading Bot</h1>
+            <p>Real-time cryptocurrency trading with reinforcement learning</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Portfolio Overview -->
+            <div class="card">
+                <h3>📊 Portfolio Overview</h3>
+                <div id="portfolio-metrics">
+                    <div class="loading">Loading portfolio data...</div>
+                </div>
+            </div>
+
+            <!-- Wallet Balance -->
+            <div class="card">
+                <h3>💰 Wallet Balance</h3>
+                <div id="wallet-balance">
+                    <div class="loading">Loading wallet data...</div>
+                </div>
+            </div>
+
+            <!-- Training Status -->
+            <div class="card">
+                <h3>🎯 Training Status</h3>
+                <div id="training-status">
+                    <div class="loading">Loading training data...</div>
+                </div>
+            </div>
+
+            <!-- Model Indicators -->
+            <div class="card">
+                <h3>📈 Model Indicators</h3>
+                <div id="model-indicators">
+                    <div class="loading">Loading indicators...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="chart-container">
+            <h3>📈 Performance Chart</h3>
+            <canvas id="performanceChart" width="400" height="200"></canvas>
+        </div>
+
+        <!-- Trade History -->
+        <div class="card">
+            <h3>📋 Recent Trades</h3>
+            <button class="refresh-btn" onclick="refreshData()">🔄 Refresh</button>
+            <div id="trade-history" class="trade-history">
+                <div class="loading">Loading trade history...</div>
+            </div>
+        </div>
+
+        <div class="last-updated" id="last-updated">
+            Last updated: Never
+        </div>
+    </div>
+
+    <script>
+        let performanceChart;
+        let lastUpdateTime = new Date();
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeChart();
+            loadAllData();
+            // Refresh data every 30 seconds
+            setInterval(loadAllData, 30000);
+        });
+
+        function initializeChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Portfolio Value',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadAllData() {
+            try {
+                await Promise.all([
+                    loadPortfolioData(),
+                    loadWalletBalance(),
+                    loadTrainingStatus(),
+                    loadModelIndicators(),
+                    loadTradeHistory()
+                ]);
+                updateLastUpdated();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError('Failed to load dashboard data');
+            }
+        }
+
+        async function loadPortfolioData() {
+            try {
+                const response = await axios.get('/api/profit_loss');
+                const data = response.data;
+                
+                const container = document.getElementById('portfolio-metrics');
+                container.innerHTML = `
+                    <div class="metric">
+                        <span class="metric-label">Total Profit/Loss:</span>
+                        <span class="metric-value ${data.profit >= 0 ? 'profit' : 'loss'}">
+                            ${formatCurrency(data.profit)}
+                        </span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Status:</span>
+                        <span class="metric-value">
+                            <span class="status-indicator status-online"></span>
+                            Active
+                        </span>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('portfolio-metrics').innerHTML = 
+                    '<div class="error">Failed to load portfolio data</div>';
+            }
+        }
+
+        async function loadWalletBalance() {
+            try {
+                const response = await axios.get('/api/account/wallet-balance');
+                const data = response.data;
+                
+                const container = document.getElementById('wallet-balance');
+                if (data.coins && data.coins.length > 0) {
+                    let html = '';
+                    data.coins.forEach(coin => {
+                        html += `
+                            <div class="metric">
+                                <span class="metric-label">${coin.coin}:</span>
+                                <span class="metric-value">${formatCurrency(coin.walletBalance)}</span>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div class="neutral">No wallet data available</div>';
+                }
+            } catch (error) {
+                document.getElementById('wallet-balance').innerHTML = 
+                    '<div class="error">Failed to load wallet data</div>';
+            }
+        }
+
+        async function loadTrainingStatus() {
+            try {
+                const response = await axios.get('/api/training_status');
+                const data = response.data;
+                
+                const container = document.getElementById('training-status');
+                if (data.logs && data.logs.length > 0) {
+                    container.innerHTML = `
+                        <div class="metric">
+                            <span class="metric-label">Current Status:</span>
+                            <span class="metric-value">${data.logs[0]}</span>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '<div class="neutral">No training data available</div>';
+                }
+            } catch (error) {
+                document.getElementById('training-status').innerHTML = 
+                    '<div class="error">Failed to load training status</div>';
+            }
+        }
+
+        async function loadModelIndicators() {
+            try {
+                const response = await axios.get('/api/model_indicators');
+                const data = response.data;
+                
+                const container = document.getElementById('model-indicators');
+                if (data.indicators) {
+                    let html = '';
+                    const indicators = data.indicators;
+                    const importantIndicators = ['close', 'rsi', 'macd', 'bb_position'];
+                    
+                    importantIndicators.forEach(indicator => {
+                        if (indicators[indicator] !== undefined) {
+                            html += `
+                                <div class="metric">
+                                    <span class="metric-label">${indicator.toUpperCase()}:</span>
+                                    <span class="metric-value">${indicators[indicator]}</span>
+                                </div>
+                            `;
+                        }
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div class="neutral">No indicators available</div>';
+                }
+            } catch (error) {
+                document.getElementById('model-indicators').innerHTML = 
+                    '<div class="error">Failed to load indicators</div>';
+            }
+        }
+
+        async function loadTradeHistory() {
+            try {
+                const response = await axios.get('/api/trade_history');
+                const data = response.data;
+                
+                const container = document.getElementById('trade-history');
+                if (data && data.length > 0) {
+                    let html = '';
+                    data.slice(0, 10).forEach(trade => {
+                        const tradeClass = trade.action === 'buy' ? 'trade-buy' : 'trade-sell';
+                        html += `
+                            <div class="trade-item ${tradeClass}">
+                                <div>
+                                    <strong>${trade.action.toUpperCase()}</strong> ${trade.symbol || 'BTCUSDT'}
+                                </div>
+                                <div>
+                                    ${formatCurrency(trade.price || 0)} | ${trade.quantity || 0}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div class="neutral">No trade history available</div>';
+                }
+            } catch (error) {
+                document.getElementById('trade-history').innerHTML = 
+                    '<div class="error">Failed to load trade history</div>';
+            }
+        }
+
+        function refreshData() {
+            loadAllData();
+        }
+
+        function updateLastUpdated() {
+            lastUpdateTime = new Date();
+            document.getElementById('last-updated').textContent = 
+                `Last updated: ${lastUpdateTime.toLocaleTimeString()}`;
+        }
+
+        function formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '$0.00';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+
+        function showError(message) {
+            console.error(message);
+            // You could add a toast notification here
+        }
+    </script>
+</body>
+</html>

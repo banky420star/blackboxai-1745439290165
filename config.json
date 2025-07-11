@@ -1,0 +1,53 @@
+{
+  "bybit": {
+    "api_key": "YOUR_BYBIT_API_KEY",
+    "api_secret": "YOUR_BYBIT_API_SECRET",
+    "testnet": true
+  },
+  "telegram": {
+    "bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
+    "chat_id": "YOUR_TELEGRAM_CHAT_ID"
+  },
+  "trading": {
+    "symbol": "BTCUSDT",
+    "timeframe": "1h",
+    "initial_capital": 1000.0,
+    "position_size": 0.1,
+    "max_positions": 1,
+    "stop_loss": 0.02,
+    "take_profit": 0.04
+  },
+  "model": {
+    "learning_rate": 0.001,
+    "gamma": 0.95,
+    "epsilon": 1.0,
+    "epsilon_min": 0.01,
+    "epsilon_decay": 0.995,
+    "batch_size": 32,
+    "memory_size": 10000,
+    "update_target_freq": 100
+  },
+  "data": {
+    "lookback_period": 60,
+    "engineered_data_file": "engineered_data.csv",
+    "historical_data_file": "historical_data.csv"
+  },
+  "scenarios": {
+    "default": {
+      "name": "Conservative Strategy",
+      "description": "Low risk, steady returns",
+      "risk_tolerance": 0.3,
+      "max_drawdown": 0.1
+    },
+    "aggressive": {
+      "name": "Aggressive Strategy", 
+      "description": "High risk, high potential returns",
+      "risk_tolerance": 0.7,
+      "max_drawdown": 0.25
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "trading_bot.log"
+  }
+}
